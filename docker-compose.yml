@@ -1,0 +1,44 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tickets-app
+    ports:
+      - "8080:80"
+    env_file:
+      - .env
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - tickets-network
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: tickets-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${DB_PASSWORD}"
+      MSSQL_DATABASE: "${DB_DATABASE}"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${DB_PASSWORD}" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - tickets-network
+
+volumes:
+  sqlserver-data:
+
+networks:
+  tickets-network:
+    driver: bridge
