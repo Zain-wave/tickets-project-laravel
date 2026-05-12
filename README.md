@@ -1,58 +1,246 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Tickets Project API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API REST para administración de tickets, asignación de dispositivos y reporte de incidentes técnicos.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **PHP 8.3** + **Laravel 13**
+- **SQL Server 2022**
+- **Docker**
+- **JWT Auth** (tymon/jwt-auth)
+- **Sentry** (monitoreo de errores)
+- **Discord Webhooks** (notificaciones)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requisitos
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Docker & Docker Compose
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Instalación
 
 ```bash
-composer require laravel/boost --dev
+# 1. Clonar el repositorio
+git clone https://github.com/Zain-wave/tickets-project-laravel.git
+cd tickets-project-laravel
 
-php artisan boost:install
+# 2. Copiar variables de entorno
+cp .env.example .env
+
+# 3. Construir y levantar contenedores
+docker compose up -d --build
+
+# 4. Ejecutar migraciones y seeders
+docker compose exec app php artisan migrate --seed
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+La API estará disponible en `http://localhost:8080`.
 
-## Contributing
+## Variables de Entorno
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+| Variable | Descripción | Default |
+|---|---|---|
+| `APP_ENV` | Entorno | `local` |
+| `APP_KEY` | Key de Laravel | (generar con `php artisan key:generate`) |
+| `DB_CONNECTION` | Driver de BD | `sqlsrv` |
+| `DB_HOST` | Host de BD | `sqlserver` |
+| `DB_PORT` | Puerto | `1433` |
+| `DB_DATABASE` | Nombre BD | `tickets` |
+| `DB_USERNAME` | Usuario BD | `sa` |
+| `DB_PASSWORD` | Contraseña BD | (definir) |
+| `JWT_SECRET` | Secreto JWT | (generar con `php artisan jwt:secret`) |
+| `SENTRY_LARAVEL_DSN` | DSN de Sentry | — |
+| `DISCORD_WEBHOOK` | URL de webhook Discord | — |
 
-## Code of Conduct
+## Endpoints
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Autenticación
 
-## Security Vulnerabilities
+| Método | Endpoint | Descripción | Auth |
+|---|---|---|---|
+| POST | `/api/register` | Registrar usuario | No |
+| POST | `/api/login` | Iniciar sesión | No |
+| GET | `/api/me` | Obtener perfil | Sí |
+| POST | `/api/logout` | Cerrar sesión | Sí |
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Tickets
 
-## License
+| Método | Endpoint | Descripción | Auth |
+|---|---|---|---|
+| GET | `/api/tickets` | Listar tickets | Sí |
+| POST | `/api/tickets` | Crear ticket | Sí |
+| GET | `/api/tickets/{id}` | Ver ticket | Sí |
+| PUT | `/api/tickets/{id}` | Actualizar ticket | Sí |
+| DELETE | `/api/tickets/{id}` | Eliminar ticket | Sí |
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Dispositivos
+
+| Método | Endpoint | Descripción | Auth |
+|---|---|---|---|
+| GET | `/api/devices` | Listar dispositivos | Sí |
+| POST | `/api/devices` | Crear dispositivo | Sí |
+| GET | `/api/devices/{id}` | Ver dispositivo | Sí |
+| POST | `/api/devices/assign` | Asignar dispositivo | Sí |
+| POST | `/api/devices/return/{assignmentId}` | Devolver dispositivo | Sí |
+| GET | `/api/devices/{id}/history` | Historial de asignaciones | Sí |
+
+### Rate Limiting
+
+- Endpoints de auth: **5 requests/minuto** por IP
+- Endpoints protegidos: **30 requests/minuto** por usuario/IP
+
+## Respuestas JSON
+
+### Éxito
+
+```json
+{
+  "data": { ... },
+  "meta": {
+    "current_page": 1,
+    "last_page": 5,
+    "per_page": 15,
+    "total": 75
+  }
+}
+```
+
+### Error
+
+```json
+{
+  "message": "Descripción del error"
+}
+```
+
+## Notificaciones Discord
+
+- **Errores 500+**: se envía alerta con endpoint, método, mensaje de error, IP y fecha
+- **Rate Limit excedido**: se envía alerta con endpoint, IP, timestamp e intentos
+
+## Sentry
+
+Todas las excepciones son capturadas y enviadas a Sentry automáticamente.
+
+## Seeders
+
+```bash
+docker compose exec app php artisan db:seed
+```
+
+Usuarios de prueba:
+
+| Email | Password | Rol |
+|---|---|---|
+| admin@example.com | password | Admin |
+| tech@example.com | password | Tech Support |
+| user@example.com | password | Regular User |
+
+## Postman Collection
+
+Importar en Postman:
+
+```json
+{
+  "info": {
+    "name": "Tickets API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Register",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/register",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"User\", \"email\": \"user@example.com\", \"password\": \"password\", \"password_confirmation\": \"password\"}"
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/login",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"user@example.com\", \"password\": \"password\"}"
+        }
+      }
+    },
+    {
+      "name": "Get Tickets",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/tickets",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+      }
+    },
+    {
+      "name": "Create Ticket",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/tickets",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Issue title\", \"description\": \"Description\", \"priority\": \"medium\"}"
+        }
+      }
+    },
+    {
+      "name": "Get Devices",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/devices",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+      }
+    },
+    {
+      "name": "Assign Device",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/devices/assign",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"user_id\": 1, \"device_id\": 1, \"notes\": \"Assignment note\"}"
+        }
+      }
+    }
+  ]
+}
+```
+
+## Arquitectura
+
+```
+app/
+├── Http/
+│   ├── Controllers/Api/    # Controladores
+│   └── Requests/           # Validación de requests
+├── Models/                 # Modelos Eloquent
+├── Providers/
+└── Services/               # Lógica de negocio
+
+database/
+└── migrations/             # Migraciones SQL
+└── seeders/                # Datos de prueba
+```
