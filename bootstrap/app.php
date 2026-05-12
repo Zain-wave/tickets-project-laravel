@@ -13,8 +13,38 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->api(prepend: [
+            \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         Integration::handles($exceptions);
+
+        $exceptions->reportable(function (Throwable $e) {
+            if (app()->bound('sentry')) {
+                app('sentry')->captureException($e);
+            }
+
+            $statusCode = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpException
+                ? $e->getStatusCode()
+                : 500;
+
+            if ($statusCode === 429) {
+                return;
+            }
+
+            if ($statusCode >= 500) {
+                try {
+                    $discord = app(\App\Services\DiscordNotificationService::class);
+                    $request = request();
+                    $discord->notifyError(
+                        endpoint: $request?->path() ?? 'unknown',
+                        method: $request?->method() ?? 'N/A',
+                        message: $e->getMessage(),
+                        ip: $request?->ip() ?? 'unknown',
+                    );
+                } catch (\Throwable) {
+                }
+            }
+        });
     })->create();
